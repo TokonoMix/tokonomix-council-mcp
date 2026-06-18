@@ -1,0 +1,3 @@
+# Internal docs — never ship in the public npm package.
+REVIEW-*.md
+*-review-*.md

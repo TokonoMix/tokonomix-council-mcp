@@ -1,0 +1,12 @@
+{
+  "_comment": "Drop this into your MCP client config (Claude Code: .mcp.json; Cursor/Cline/Zed: their MCP settings). No API key needed up front — run tokonomix_onboard for a free-tier key, or set TOKONOMIX_API_KEY.",
+  "mcpServers": {
+    "tokonomix": {
+      "command": "npx",
+      "args": ["-y", "tokonomix-council-mcp"],
+      "env": {
+        "TOKONOMIX_API_KEY": "tok_live_...optional..."
+      }
+    }
+  }
+}
