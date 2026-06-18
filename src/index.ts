@@ -506,6 +506,15 @@ function normalizeContext(raw: unknown): Record<string, unknown> | undefined {
     if (refs.length > 0) out.github_refs = refs;
   }
 
+  // B08 (escalated form): pass an upload-session id + opaque handles through to
+  // the gateway. These are NEVER urls (no SSRF) — just the ids returned by
+  // tokonomix_upload. Server-gated: ignored unless context-upload is enabled.
+  if (typeof c.session === 'string' && c.session.trim().length > 0) out.session = c.session.trim();
+  if (Array.isArray(c.handles)) {
+    const handles = c.handles.filter((h): h is string => typeof h === 'string' && h.trim().length > 0);
+    if (handles.length > 0) out.handles = handles;
+  }
+
   return Object.keys(out).length > 0 ? out : undefined;
 }
 
@@ -578,6 +587,13 @@ interface FullModeRawResponse {
   x_council: {
     per_model: RawProposer[];
     charged_credits: number;
+    feedback_invite?: {
+      rate_with: string;
+      request_id: string;
+      message: string;
+      share_findings?: boolean;
+      reward: string;
+    } | null;
   };
 }
 
@@ -820,6 +836,11 @@ async function runFullMode(a: Record<string, unknown>): Promise<{
   const totalCharged =
     (rawResult.x_council?.charged_credits ?? 0) + (judgeResult.x_council?.charged_credits ?? 0);
 
+  const fullModeInvite = rawResult.x_council?.feedback_invite;
+  const fullModeInviteText = fullModeInvite
+    ? `\n📋 Feedback gevraagd: roep ${fullModeInvite.rate_with}(request_id="${fullModeInvite.request_id}", score=...) aan om deze consensus te beoordelen — ${fullModeInvite.message}. ${fullModeInvite.reward}`
+    : '';
+
   return {
     content: [
       { type: 'text', text: readableContent },
@@ -828,7 +849,8 @@ async function runFullMode(a: Record<string, unknown>): Promise<{
         text:
           `\n---\nMode: full · Total charged: ${totalCharged} cents (raw: ${rawResult.x_council?.charged_credits ?? 0}c + judge: ${judgeResult.x_council?.charged_credits ?? 0}c)\n` +
           `Judge: ${judgeResult.model ?? judgeModel} · ` +
-          `Proposers:\n${proposerLines}`,
+          `Proposers:\n${proposerLines}` +
+          fullModeInviteText,
       },
       skillVersionTrailer(),
     ],
@@ -908,6 +930,15 @@ const TOOLS = [
               type: 'array',
               items: { type: 'string' },
               description: 'Public github.com https file URLs to fetch and ground on (server-side, SSRF-allowlisted).',
+            },
+            session: {
+              type: 'string',
+              description: 'B08 (escalated): an upload-session id from tokonomix_upload. When set, the council reads the ONE shared context-pack for the session instead of inline. Server-gated; ignored unless context-upload is enabled.',
+            },
+            handles: {
+              type: 'array',
+              items: { type: 'string' },
+              description: 'B08: opaque handle ids for the staged objects (from tokonomix_upload). Never a URL.',
             },
           },
         },
@@ -1083,6 +1114,12 @@ const TOOLS = [
           type: 'string',
           description: 'Optional display name for the account (max 200 characters).',
         },
+        locale: {
+          type: 'string',
+          enum: ['en', 'nl', 'de', 'fr', 'es', 'tr'],
+          description:
+            "Optional UI/email language for the account (the welcome email + dashboard links use it). Pass the user's language if you know it; defaults to English.",
+        },
       },
       required: ['email'],
     },
@@ -1108,6 +1145,99 @@ const TOOLS = [
         },
       },
       required: ['email', 'code'],
+    },
+  },
+  {
+    name: 'tokonomix_rate_consensus',
+    description: [
+      'Rate a consensus call 1–10 on real-world usefulness, after you have seen the answer play out.',
+      'The `request_id` is returned by tokonomix_consensus_ask in the billing breakdown line (` · request_id: ...`) and in the `x_council.request_id` metadata field.',
+      'Optional: `helped_model` credits the ONE model whose minority or blind-spot view actually helped (the red-thread blind-spot differentiator) — supply its bare slug (e.g. "gemini-2.5-pro"). Opt-in, no friction.',
+      'Optional: `note` accepts up to 2000 chars of free text — it is transmitted to the server for validation but is never stored or aggregated (privacy-by-design). Only `score`, `helped_model` and the feedback fields below are persisted.',
+      'Optional feedback (INT-1882, accepted only when the platform feedback-loop is enabled): `outcome` (correct|wrong|partial) is the minimal always-useful signal; `findings` is the rich agent signal — the real/false split per severity bucket {high,medium,low}:{real,false}. The auto-scoring already counts the buckets; you supply only whether each was a TRUE catch or a FALSE positive. Sharing the full findings earns the review-discount once go-live (one model-call less on that round).',
+      'Per-account dedup: one authoritative rating per request_id per account; re-submitting updates it (last-write-wins). Requires the same API key that made the original call.',
+      'Built DORMANT (INT-1818 Q3): returns 404 until the platform enables the feature.',
+    ].join(' '),
+    inputSchema: {
+      type: 'object',
+      properties: {
+        request_id: {
+          type: 'string',
+          description: 'The UUID of the consensus call to rate. Returned by tokonomix_consensus_ask.',
+        },
+        score: {
+          type: 'integer',
+          minimum: 1,
+          maximum: 10,
+          description: 'Usefulness score 1–10 (1 = not useful at all, 10 = extremely useful in practice).',
+        },
+        note: {
+          type: 'string',
+          maxLength: 2000,
+          description: 'Optional free-text context (max 2000 chars). Accepted for caller convenience but NEVER stored.',
+        },
+        helped_model: {
+          type: 'string',
+          maxLength: 200,
+          description: 'Optional bare model slug of the one model whose minority view or blind-spot catch actually helped (e.g. "gemini-2.5-pro"). Blind-spot direct credit — opt-in.',
+        },
+        outcome: {
+          type: 'string',
+          enum: ['correct', 'wrong', 'partial'],
+          description: 'Optional (feedback-loop): did the consensus answer turn out correct, wrong, or partial in practice? The minimal validation signal — upgrades the call to high-confidence scoring.',
+        },
+        findings: {
+          type: 'object',
+          description: 'Optional (feedback-loop, agent path): the requester real/false validation per severity bucket. Counts only — never finding text. Each count must not exceed the bucket count the call actually produced.',
+          properties: {
+            high: { $ref: '#/$defs/bucketFindings' },
+            medium: { $ref: '#/$defs/bucketFindings' },
+            low: { $ref: '#/$defs/bucketFindings' },
+          },
+          additionalProperties: false,
+        },
+      },
+      required: ['request_id', 'score'],
+      $defs: {
+        bucketFindings: {
+          type: 'object',
+          properties: {
+            real: { type: 'integer', minimum: 0, description: 'How many findings in this bucket were TRUE catches.' },
+            false: { type: 'integer', minimum: 0, description: 'How many were FALSE positives (the precision signal).' },
+          },
+          required: ['real', 'false'],
+          additionalProperties: false,
+        },
+      },
+    },
+  },
+  {
+    name: 'tokonomix_upload',
+    description: [
+      'Stage large context (over the inline cap) for a grounded consensus call (INT-1817 B08).',
+      'Returns an ephemeral, region-pinned upload session: a `session` id + opaque `handles`. Pass `context:{session, handles}` to tokonomix_consensus_ask so all proposers + judges read the ONE shared context-pack (build-once, in-region digest).',
+      'The staged content is ephemeral (auto-purged after a short retention) and region-pinned (EU by default). NEVER pass a URL — only file contents; the server never fetches a caller URL (no SSRF).',
+      'Built DORMANT: returns a clear "not enabled" message until the platform enables context-upload (a later decision). Use inline context.inline for small payloads instead.',
+    ].join(' '),
+    inputSchema: {
+      type: 'object',
+      properties: {
+        files: {
+          type: 'array',
+          description: 'The files/snippets to stage. Each is staged verbatim or digested server-side (the verbatim budget is server-bounded).',
+          items: {
+            type: 'object',
+            properties: {
+              path: { type: 'string', description: 'Optional path/label.' },
+              lang: { type: 'string', description: 'Optional language hint.' },
+              content: { type: 'string', description: 'The verbatim file/snippet content.' },
+              verbatim: { type: 'boolean', description: 'Request verbatim (uncompressed) inclusion; server-bounded — over-budget files are digested.' },
+            },
+            required: ['content'],
+          },
+        },
+      },
+      required: ['files'],
     },
   },
 ];
@@ -1180,7 +1310,20 @@ server.setRequestHandler(CallToolRequestSchema, async (req) => {
       const r = result as {
         choices: Array<{ message: { content: string } }>;
         usage: { prompt_tokens: number; completion_tokens: number; total_tokens: number };
-        x_council: { mode: string; per_model: Array<{ model: string; cost_micros?: number; error?: { code: string; message: string } }>; charged_credits: number; synth: { fallback_to_raw: boolean } };
+        x_council: {
+          mode: string;
+          per_model: Array<{ model: string; cost_micros?: number; error?: { code: string; message: string } }>;
+          charged_credits: number;
+          synth: { fallback_to_raw: boolean };
+          request_id?: string;
+          feedback_invite?: {
+            rate_with: string;
+            request_id: string;
+            message: string;
+            share_findings?: boolean;
+            reward: string;
+          } | null;
+        };
       };
 
       // cost_micros is each proposer's RAW provider cost-of-goods (pre-markup),
@@ -1193,6 +1336,11 @@ server.setRequestHandler(CallToolRequestSchema, async (req) => {
         return `${m.model}: ${((m.cost_micros ?? 0) / 10_000).toFixed(2)}c provider cost`;
       }).join('\n');
 
+      const invite = r.x_council.feedback_invite;
+      const inviteText = invite
+        ? `\n📋 Feedback gevraagd: roep ${invite.rate_with}(request_id="${invite.request_id}", score=...) aan om deze consensus te beoordelen — ${invite.message}. ${invite.reward}`
+        : '';
+
       return {
         content: [
           {
@@ -1201,7 +1349,7 @@ server.setRequestHandler(CallToolRequestSchema, async (req) => {
           },
           {
             type: 'text',
-            text: `\n---\nCharged: ${r.x_council.charged_credits} cents · Mode: ${r.x_council.mode} · Proposers (provider cost, pre-markup, not charged):\n${breakdown}`,
+            text: `\n---\nCharged: ${r.x_council.charged_credits} cents · Mode: ${r.x_council.mode}${r.x_council.request_id ? ` · request_id: ${r.x_council.request_id}` : ''} · Proposers (provider cost, pre-markup, not charged):\n${breakdown}${inviteText}`,
           },
           skillVersionTrailer(),
         ],
@@ -1304,6 +1452,7 @@ server.setRequestHandler(CallToolRequestSchema, async (req) => {
         month_to_date: {
           spend_cents: number;
           calls: number;
+          tokens?: number;
           by_mode: Record<string, { calls: number; cents: number }>;
           first_call_at: string | null;
           last_call_at: string | null;
@@ -1325,7 +1474,8 @@ server.setRequestHandler(CallToolRequestSchema, async (req) => {
             type: 'text',
             text:
               `Balance: ${r.balance_eur} (${r.balance_cents} cents) · Tier: ${r.tier} · Status: ${r.status}\n` +
-              `Month-to-date: €${(r.month_to_date.spend_cents / 100).toFixed(2)} across ${r.month_to_date.calls} calls\n` +
+              `Month-to-date: €${(r.month_to_date.spend_cents / 100).toFixed(2)} across ${r.month_to_date.calls} calls` +
+              `${r.month_to_date.tokens != null ? ` · ${r.month_to_date.tokens.toLocaleString('en-US')} tokens` : ''}\n` +
               `Per mode:\n${modeBreakdown}\n` +
               `As of: ${r.as_of}` +
               lowBalanceWarning,
@@ -1377,6 +1527,7 @@ server.setRequestHandler(CallToolRequestSchema, async (req) => {
       if (!email) throw new Error('email is required');
       const body: Record<string, unknown> = { email };
       if (typeof a.name === 'string' && a.name.trim()) body.name = a.name.trim();
+      if (typeof a.locale === 'string' && a.locale.trim()) body.locale = a.locale.trim();
 
       // siteFetch throws on non-2xx; any HTTP error (400 disposable, 429 rate-limit) surfaces here.
       await siteFetch('/api/onboard/start', body);
@@ -1451,6 +1602,127 @@ server.setRequestHandler(CallToolRequestSchema, async (req) => {
               `**Dashboard:** ${dashboardUrl}` +
               overwriteNote,
           },
+        ],
+      };
+    }
+
+    if (name === 'tokonomix_rate_consensus') {
+      const requestId = typeof a.request_id === 'string' ? a.request_id.trim() : '';
+      if (!requestId) throw new Error('request_id is required');
+
+      const score = typeof a.score === 'number' ? a.score : undefined;
+      if (score === undefined || !Number.isInteger(score) || score < 1 || score > 10) {
+        throw new Error('score must be an integer between 1 and 10');
+      }
+
+      const body: Record<string, unknown> = { score };
+      if (typeof a.note === 'string' && a.note.trim()) body.note = a.note.trim();
+      if (typeof a.helped_model === 'string' && a.helped_model.trim()) {
+        body.helped_model = a.helped_model.trim();
+      }
+      // Feedback-loop fields (INT-1882): forwarded as-is; the server rejects them
+      // (400) when the platform feedback-loop is disabled, and validates the
+      // findings counts against the call's real bucket counts when enabled.
+      if (typeof a.outcome === 'string' && a.outcome.trim()) {
+        body.outcome = a.outcome.trim();
+      }
+      if (a.findings && typeof a.findings === 'object' && !Array.isArray(a.findings)) {
+        body.findings = a.findings;
+      }
+
+      const result = await tokonomixFetch(`/consensus/${encodeURIComponent(requestId)}/rate`, {
+        method: 'POST',
+        headers: authHeaders(),
+        body: JSON.stringify(body),
+      });
+
+      const r = result as {
+        object: string;
+        request_id: string;
+        score: number;
+        helped_model: string | null;
+        outcome?: string | null;
+        review_reward?: number | null;
+        recorded_at: string;
+      };
+
+      const helpedLine = r.helped_model ? ` · Blind-spot credit → ${r.helped_model}` : '';
+      const outcomeLine = r.outcome ? ` · outcome: ${r.outcome}` : '';
+      const rewardLine = typeof r.review_reward === 'number' ? ` · review_reward: ${r.review_reward}` : '';
+
+      return {
+        content: [
+          {
+            type: 'text',
+            text:
+              `Rating recorded: ${r.score}/10${helpedLine}${outcomeLine}${rewardLine}\n` +
+              `request_id: ${r.request_id} · recorded_at: ${r.recorded_at}`,
+          },
+          skillVersionTrailer(),
+        ],
+      };
+    }
+
+    if (name === 'tokonomix_upload') {
+      const files = Array.isArray(a.files) ? a.files : [];
+      if (files.length === 0) throw new Error('files is required (a non-empty array of {content})');
+
+      // 1. Request an ephemeral, region-pinned upload session/key. The gateway is
+      //    flag-gated → 404 context_upload_disabled while the feature is dormant.
+      let keyResp: unknown;
+      try {
+        keyResp = await tokonomixFetch('/context/upload-key', {
+          method: 'POST',
+          headers: authHeaders(),
+          body: JSON.stringify({}),
+        });
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : String(e);
+        if (msg.includes('context_upload_disabled')) {
+          return {
+            content: [
+              {
+                type: 'text',
+                text:
+                  'Context upload is not enabled yet (DORMANT). Use context.inline for small ' +
+                  'payloads on tokonomix_consensus_ask, or ask the platform to enable uploads.',
+              },
+              skillVersionTrailer(),
+            ],
+          };
+        }
+        throw e;
+      }
+      const k = keyResp as { session: string; upload_url: string; handle: string; max_bytes: number };
+
+      // 2. Pack the files and PUT them to the presigned URL — OUR region-pinned
+      //    bucket (no SSRF: we never fetch a caller URL). Enforce the byte cap.
+      const payload = JSON.stringify({
+        files: files
+          .filter((f): f is Record<string, unknown> => !!f && typeof f === 'object')
+          .map((f) => ({
+            content: String((f as Record<string, unknown>).content ?? ''),
+            path: typeof (f as Record<string, unknown>).path === 'string' ? (f as Record<string, unknown>).path : undefined,
+            lang: typeof (f as Record<string, unknown>).lang === 'string' ? (f as Record<string, unknown>).lang : undefined,
+            verbatim: (f as Record<string, unknown>).verbatim === true,
+          })),
+      });
+      if (Buffer.byteLength(payload, 'utf8') > k.max_bytes) {
+        throw new Error(`upload exceeds the ${k.max_bytes}-byte cap for this key`);
+      }
+      const putRes = await fetch(k.upload_url, { method: 'PUT', body: payload });
+      if (!putRes.ok) throw new Error(`upload failed: HTTP ${putRes.status}`);
+
+      return {
+        content: [
+          {
+            type: 'text',
+            text:
+              `Staged ${files.length} file(s) in upload session ${k.session}.\n` +
+              `Re-ask with context:{session:"${k.session}", handles:["${k.handle}"]} on ` +
+              `tokonomix_consensus_ask — all proposers + judges will read the shared pack.`,
+          },
+          skillVersionTrailer(),
         ],
       };
     }

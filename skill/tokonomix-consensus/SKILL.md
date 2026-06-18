@@ -1,13 +1,13 @@
 ---
 name: tokonomix-consensus
-version: 1.3.0
-released: 2026-06-10
+version: 1.5.2
+released: 2026-06-16
 description: Cross-check a high-stakes answer across multiple frontier models (Claude + GPT + Gemini side by side, then a judge synthesizes) when one model is not enough — triggers on "double-check / verify / make sure / be careful", before anything irreversible (DB migrations, customer-facing or legal/compliance statements, security-relevant code), and fact-checking before it ships. Reduces single-model error and surfaces disagreement; it does NOT guarantee correctness. Also exposes EU-only routing for personal data, a cheap single-model passthrough, vision/image input, and live model-catalog discovery.
 ---
 
 # Tokonomix consensus skill
 
-When a wrong answer is expensive — legal/compliance interpretation, a security-relevant code change, a fact that's about to ship in a customer-facing document — don't trust a single LLM. Ask two or three frontier models in parallel and have a judge model synthesize the result.
+When a wrong answer is expensive — legal/compliance interpretation, a security-relevant code change, a fact that's about to ship in a customer-facing document — don't trust a single LLM. Ask two or three frontier models in parallel and have an **independent judge synthesize the result** — by default the judge is selected from the same multi-vendor pool (Anthropic / OpenAI / Google / open-weight), is **a different model than the proposers it scores**, and is never asked to score its own answer, so the synthesis step doesn't inherit one vendor's blind spot. You can pin the judge or run a multi-judge panel (prefer a cross-family one).
 
 Its real edge is **cross-vendor diversity**: Claude, GPT and Gemini answer the *same* prompt side by side, then a judge synthesizes them. Your host agent's own review tooling or sub-agents can only give you one vendor's perspective — a cross-vendor check is the one thing they cannot reproduce. Reach for it when the cost of a wrong answer exceeds the few cents the check costs.
 
@@ -54,13 +54,14 @@ For weak signals use `tokonomix_single_ask` (~3× cheaper) or stay with your def
 
 Consensus costs real money — every proposer **plus** the judge is billed. Don't fly blind across many calls:
 
-- **Check funds first.** Call `tokonomix_get_balance` at the start of a session that will make several consensus calls. Keep a running total of `charged_credits` (returned on every call) so you always know what you've spent.
+- **Check funds first.** Call `tokonomix_get_balance` at the start of a session that will make several consensus calls. It reports your balance plus **month-to-date usage — both € spent and total token throughput** (`month_to_date.tokens`, summed over successful proposer + judge calls; failed/error calls contribute none), broken down by mode. Track *both* ceilings — the € cost (`charged_credits`, returned on every call) and the token throughput — and **degrade as soon as you approach the first of the two**, whichever you reach sooner.
 - **Degrade, don't stall.** If you cannot run consensus, walk *down* this ladder instead of blocking:
   1. `tokonomix_consensus_ask` — full cross-model check
   2. `tokonomix_single_ask` — one model, ~3× cheaper
   3. your own host model — no Tokonomix call
   4. proceed and **flag the answer as unverified** so a human can review later
 - **Map errors to the ladder:** `402 insufficient_balance` → drop to single_ask / host model (or top up); `429 rate_limit` → back off and retry, then degrade; `5xx` → retry once, then degrade.
+- **Set the guardrails on the key, not just in the loop.** Each API key carries its own preferences: a **predefined default model + council/route** (which proposers, which judge, which mode) and a **monthly spend cap** (`monthly_limit_cents`, enforced gateway-side — the key is blocked once the month's charged spend would exceed it). You can also restrict a key by allowed models / modes / judges / hosting regions / model-origin countries. So budget and routing can be fixed once on the key and trusted across every run, instead of re-deciding per call.
 
 If you are running **unattended over a backlog**, agree the spend policy with the user up front — how much to spend, and what to do when credits run out — don't discover an empty wallet mid-run.
 
@@ -73,6 +74,8 @@ Consensus output is non-deterministic and the default council can change server-
 - the date and the exact prompt.
 
 Without that, the result is not reproducible.
+
+Once you see how the answer played out, **call `tokonomix_rate_consensus(request_id, score)` by default** — a 1–10 usefulness rating takes one line and feeds the model votes, statistics, and blind-spot reputation the platform needs to improve council selection. Skipping it silently discards a quality signal that cannot be recovered later. If the tool output includes a "Feedback gevraagd" nudge (surfaced from `x_council.feedback_invite`), that round is already flagged as eligible and rating it is the expected action, not an option. Only skip when there is a clear reason (e.g., you cannot yet assess the answer because it has not been acted on). If a minority model's view is what actually mattered, add `helped_model: "<slug>"` for direct credit. If you triaged the findings (you usually did), also pass `outcome` (correct/wrong/partial) and `findings` (the real/false split per severity bucket) — you draft it, the human approves before submitting. On an opted-in account that full review bills the round one model-call less.
 
 ## Data residency & privacy
 
@@ -114,7 +117,7 @@ tokonomix_list_models({"hosting_region": "eu"})
 
 ## Tools
 
-The MCP server exposes **eight** tools, all prefixed `tokonomix_`. No key yet? Jump to **Getting started** at the bottom.
+The MCP server exposes **nine** tools, all prefixed `tokonomix_`. No key yet? Jump to **Getting started** at the bottom.
 
 ### `tokonomix_consensus_ask` — primary
 
@@ -227,6 +230,12 @@ Live catalog filtered by `hosting_region` (`"eu"` for EU-only / GDPR — resolve
 
 Current credit balance + account tier of the authenticated key. Use it to gate budget / degradation decisions (see **Budget awareness**).
 
+### `tokonomix_rate_consensus` — default post-call rating
+
+After acting on a consensus answer, **rate it by default**: call `tokonomix_rate_consensus(request_id, score)` with a 1–10 usefulness score. This is not optional housekeeping — it is a quality signal that feeds model votes, live statistics, and blind-spot reputation used to improve council selection. Every skipped rating is lost data the platform cannot recover retroactively. Use the `request_id` returned in the billing breakdown (`· request_id: …`) or in `x_council.request_id`. If the tool output surfaced a "Feedback gevraagd" nudge (from `x_council.feedback_invite`), that round is explicitly eligible and rating is the expected action. If a model's minority or blind-spot view is what actually helped, supply its slug in `helped_model` — that gives the model direct credit in the blind-spot board. Free-text `note` (max 2000 chars) is accepted for context but never stored. Re-submitting updates the score for the same call (last-write-wins). The feature is platform-gated and dormant until enabled; it returns 404 when off.
+
+When the platform feedback-loop is live, the call also accepts the requester validation: `outcome` (`correct`/`wrong`/`partial`) and `findings` (the TRUE/FALSE split per severity bucket — `{high,medium,low}:{real,false}`). The auto-scoring already counts the buckets; you only confirm which catches were real and which were false positives (the false count is the precision signal the platform cannot derive on its own). The submitting agent drafts this from the triage it already did; **the customer approves before submitting** — do not submit findings without human sign-off. On an account that opted in (once, at onboarding), sharing the full findings bills that consensus round **one model-call less** (valued at the account's tier per-call rate, shown as a line in the end report). When a `feedback_invite` appears in `x_council`, that round is eligible.
+
 ### `tokonomix_onboard` / `tokonomix_onboard_verify` — keyless first run
 
 `tokonomix_onboard(email, name?)` emails a 6-digit OTP (enumeration-safe `{ok:true}` either way); `tokonomix_onboard_verify(email, code)` provisions a free-tier account and saves the key to `~/.tokonomix/credentials.json` (mode 0600). After verify, every tool works with no env var. See **Getting started**.
@@ -268,7 +277,25 @@ User: *"Can our SaaS legally store EU citizen API logs in a US-hosted S3 bucket 
 
 - **Streaming chat UIs** — the MCP tool is request/response. For streaming use the HTTP API at `tokonomix.ai/api/v1/chat/completions`.
 - **Replacing your default coding model** — most file-edit / refactor / explain calls stay on your direct provider key. Use Tokonomix only when consensus adds real value.
-- **Replacing Anthropic prompt caching** — for Claude Code's heavy system-prompt caching, keep `ANTHROPIC_API_KEY` pointed straight at Anthropic.
+
+## Caching & context-pack — paying for context once
+
+Verification can be context-heavy (a diff, a spec, a long file). Tokonomix is built so you don't
+pay for that context N times over:
+
+- **Prompt caching passes through.** On the Anthropic-Messages endpoint (`tokonomix.ai/api/anthropic`)
+  Anthropic `cache_control` breakpoints are forwarded to the provider, so a stable system prompt or
+  large context is cached and billed at the cache-read rate on repeat calls — the same caching you'd
+  get hitting Anthropic directly, but through one key with consensus available. (OpenAI auto-caching
+  is likewise honoured and billed at cache rates.) You do **not** have to bypass Tokonomix to keep
+  your caching; point your agent at the gateway and caching still works.
+- **Shared context-pack across the council.** When you ground a council on a context-pack, the SAME
+  pack is reused by every proposer *and* the judge — you pay for the context once, not once per
+  model. (Contrast: paying to re-send the whole context to each model independently.) Context-pack
+  grounding is **server- and account-gated** — available on accounts where it is enabled, not a
+  universal default; check `tokonomix_list_models` / your account, and treat it as available-when-on
+  rather than guaranteed. The honesty rule still holds: grounding the council on the real source is
+  the biggest lever against shared hallucination — feed the actual diff/spec/logs.
 
 ## Troubleshooting
 
@@ -283,3 +310,12 @@ Errors map to the **Budget awareness & degradation** ladder above:
 ## Getting started
 
 **Keyless (recommended):** if the server has no `TOKONOMIX_API_KEY`, call `tokonomix_onboard(email)` then `tokonomix_onboard_verify(email, code)` — provisions a free-tier account (€5.00 starter credit) and saves the key locally. Manual key setup, MCP-registration JSON, and dashboard links live in [SETUP.md](./SETUP.md).
+
+## Related skills
+
+- **`tokonomix-gateway`** — direct HTTP access for apps and agent frameworks
+  that don't use MCP. OpenAI-compatible drop-in, image generation, embeddings,
+  STT, and HTTP consensus. See [skill/tokonomix-gateway/SKILL.md](../tokonomix-gateway/SKILL.md).
+- **`agents-never-sleep`** — unattended backlog runner that uses these MCP tools
+  for the review gate. Get it:
+  `git clone https://github.com/TokonoMix/agents-never-sleep`

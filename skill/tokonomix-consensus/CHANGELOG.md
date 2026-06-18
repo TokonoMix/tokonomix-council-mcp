@@ -4,6 +4,23 @@ Machine-readable source for the in-conversation update notice. The server (`/api
 
 Format: one `## <semver> — <YYYY-MM-DD>` heading per release, followed by `- <type>: <summary>` bullets (`secfix`, `improvement`, `fix`, `docs`).
 
+## 1.5.1 — 2026-06-16
+
+- docs: recalibrated the security-review benchmark framing to what the data actually says — the cheapest single model (Haiku) matched the council on this set with fewer false positives and one call vs ~four; lead with the per-bug single-model *variance* (you don't know which to trust), not a cherry-picked "missed 42%"; added a model-call cost column; labeled false positives as flag-level (not comparable to snippet-level recall); strengthened the small-N / best-case-dataset / single-grader caveats; "5 of 12" not a percentage
+- docs: softened judge independence from "always" to "by default" (it's the default + self-scoring exclusion, not a hard server invariant — pin a cross-family judge); diff-mode example for the migration safety check; illustrative vision slugs (query list_models); fixed the issues URL to the canonical repo; added the tokonomix_rate_consensus tool row
+
+## 1.5.0 — 2026-06-16
+
+- improvement: `tokonomix_get_balance` now reports month-to-date **token throughput** (`month_to_date.tokens`, successful proposer + judge calls only) alongside € spend + calls, so a token-budgeted run can gate on throughput, not only cost — Budget-awareness section updated to track BOTH ceilings and degrade at whichever is reached first
+- docs: intro now states up front that the **judge is itself drawn from the multi-vendor pool and is always a different model than the proposers** it scores (never self-judging), so the synthesis step doesn't inherit one vendor's blind spot — plus the option to pin the judge or run a multi-judge panel
+- docs: new budget bullet — **per-key guardrails**: a key carries its own predefined default model + council/route and a gateway-enforced monthly spend cap (`monthly_limit_cents`), plus allowed-models/modes/judges/regions/origin-country restrictions, so budget + routing are fixed once on the key
+
+## 1.4.0 — 2026-06-16
+
+- improvement: new "Caching & context-pack" section — prompt caching passes through (Anthropic cache_control on /api/anthropic; OpenAI auto-caching honoured), and a grounded council reuses ONE shared context-pack across all proposers + judge (paid once, not per model)
+- fix: removed the "keep ANTHROPIC_API_KEY pointed straight at Anthropic" steer — caching works through the gateway, so you no longer need to bypass Tokonomix to keep it
+- docs: context-pack grounding described honestly as server/account-gated (available-when-on, not a universal default)
+
 ## 1.3.0 — 2026-06-10
 
 - improvement: image input (vision) support in tokonomix_consensus_ask and tokonomix_single_ask — pass images as {data, media_type} objects; council auto-selects a default vision panel when no models specified

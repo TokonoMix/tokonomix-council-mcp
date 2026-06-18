@@ -1,13 +1,13 @@
 {
   "name": "tokonomix-council-mcp",
-  "version": "1.3.0",
+  "version": "1.6.2",
   "publishConfig": {
     "access": "public"
   },
   "description": "Multi-model + multi-judge consensus for AI agents over MCP — ask 2–6 frontier LLMs, score them with a judge panel, and get one verified answer, with blind-spot (disagreement) detection, EU/sovereignty routing and single-model passthrough. For Claude Code, Cursor, Cline, Continue & Zed.",
   "type": "module",
   "bin": {
-    "tokonomix-council-mcp": "./dist/index.js"
+    "tokonomix-council-mcp": "dist/index.js"
   },
   "main": "./dist/index.js",
   "files": [
