@@ -1,0 +1,30 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "ai.tokonomix/council",
+  "title": "Tokonomix Council",
+  "description": "Multi-model consensus: 2-6 frontier LLMs answer, an independent judge synthesises one answer.",
+  "version": "1.8.4",
+  "websiteUrl": "https://tokonomix.ai",
+  "repository": {
+    "url": "https://github.com/TokonoMix/tokonomix-council-mcp",
+    "source": "github"
+  },
+  "packages": [
+    {
+      "registryType": "npm",
+      "identifier": "tokonomix-council-mcp",
+      "version": "1.8.4",
+      "transport": {
+        "type": "stdio"
+      },
+      "environmentVariables": [
+        {
+          "name": "TOKONOMIX_API_KEY",
+          "description": "Tokonomix API key (tok_live_...). Optional - keyless onboarding works without it.",
+          "isRequired": false,
+          "isSecret": true
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,5 @@
+# Internal docs — never ship in the public npm package.
+REVIEW-*.md
+*-review-*.md
+# Work-in-progress skill draft — internal only, never public (Mes 2026-06-27).
+SKILL.draft.md
