@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 820 300" role="img" aria-labelledby="title desc" font-family="Inter, system-ui, sans-serif">
+  <title id="title">Decision lifecycle and the rating feedback loop</title>
+  <desc id="desc">A decision flows: Council produces a decision with a request id and audit trail; an executor such as ANS acts on it; the outcome is observed; the call is rated by request id with outcome and findings; ratings feed model-utility reputation that informs future panel selection. The human stays accountable throughout. Council owns only the decision step; execution lives in ANS.</desc>
+  <rect width="820" height="300" fill="#0b1020"/>
+  <g stroke="#2a3550" stroke-width="1.5" fill="#131a2b">
+    <rect x="40" y="60" width="150" height="56" rx="10" stroke="#a78bfa"/>
+    <rect x="250" y="60" width="150" height="56" rx="10" stroke="#22d3ee"/>
+    <rect x="460" y="60" width="150" height="56" rx="10"/>
+    <rect x="670" y="60" width="110" height="56" rx="10" stroke="#4ade80"/>
+    <rect x="335" y="200" width="200" height="56" rx="10" stroke="#a78bfa"/>
+  </g>
+  <g fill="#e5e7eb" font-size="13" text-anchor="middle">
+    <text x="115" y="86" fill="#a78bfa">Decision</text><text x="115" y="104" fill="#94a3b8" font-size="11">+ request_id</text>
+    <text x="325" y="86" fill="#22d3ee">Act (ANS)</text><text x="325" y="104" fill="#94a3b8" font-size="11">execution</text>
+    <text x="535" y="86">Outcome</text><text x="535" y="104" fill="#94a3b8" font-size="11">observed</text>
+    <text x="725" y="86" fill="#4ade80">Rate</text><text x="725" y="104" fill="#94a3b8" font-size="11">by id</text>
+    <text x="435" y="226" fill="#a78bfa">Reputation</text><text x="435" y="244" fill="#94a3b8" font-size="11">informs future selection</text>
+  </g>
+  <g stroke="#475569" stroke-width="1.5" fill="none" marker-end="url(#a)">
+    <path d="M190 88 H245"/><path d="M400 88 H455"/><path d="M610 88 H665"/>
+    <path d="M725 116 V160 Q725 175 710 175 H535 Q515 175 505 200"/>
+    <path d="M335 228 H140 Q115 228 115 120"/>
+  </g>
+  <defs><marker id="a" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0 0 L7 3 L0 6 Z" fill="#475569"/></marker></defs>
+  <text x="410" y="285" fill="#94a3b8" font-size="12" text-anchor="middle">Council owns the decision; execution is ANS. The human stays accountable throughout.</text>
+</svg>
