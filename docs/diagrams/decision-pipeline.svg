@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 820 300" role="img" aria-labelledby="title desc" font-family="Inter, system-ui, sans-serif">
+  <title id="title">Council decision pipeline</title>
+  <desc id="desc">A request fans out to several independent proposer models running in parallel and blind. The same grounding artifact is fed to every proposer and to the judge. An independent, cross-family judge reconciles the proposers' answers into one decision, returned with an audit trail (request id, per-model cost, charged credits).</desc>
+  <rect width="820" height="300" fill="#0b1020"/>
+  <g stroke="#2a3550" stroke-width="1.5" fill="#131a2b">
+    <rect x="24" y="120" width="120" height="60" rx="10"/>
+    <rect x="220" y="40" width="150" height="44" rx="10"/>
+    <rect x="220" y="98" width="150" height="44" rx="10"/>
+    <rect x="220" y="156" width="150" height="44" rx="10"/>
+    <rect x="220" y="214" width="150" height="44" rx="10"/>
+    <rect x="470" y="120" width="140" height="60" rx="10" stroke="#a78bfa"/>
+    <rect x="680" y="110" width="120" height="80" rx="10" stroke="#22d3ee"/>
+    <rect x="220" y="262" width="390" height="30" rx="8" stroke="#4ade80"/>
+  </g>
+  <g fill="#e5e7eb" font-size="14" text-anchor="middle">
+    <text x="84" y="155">Request</text>
+    <text x="295" y="67" fill="#22d3ee">Proposer 1</text>
+    <text x="295" y="125" fill="#22d3ee">Proposer 2</text>
+    <text x="295" y="183" fill="#22d3ee">Proposer 3</text>
+    <text x="295" y="241" fill="#22d3ee">Proposer N</text>
+    <text x="540" y="146" fill="#a78bfa">Judge</text>
+    <text x="540" y="166" fill="#94a3b8" font-size="11">independent</text>
+    <text x="740" y="146" fill="#e5e7eb">Decision</text>
+    <text x="740" y="166" fill="#94a3b8" font-size="11">+ audit trail</text>
+    <text x="415" y="282" fill="#4ade80" font-size="12">Grounding: same artifact → all proposers + judge</text>
+  </g>
+  <g stroke="#475569" stroke-width="1.5" fill="none" marker-end="url(#a)">
+    <path d="M144 150 H205 M205 62 L218 62 M205 150 L218 120 M205 150 L218 178 M205 150 L218 236"/>
+    <path d="M370 62 L455 135 M370 120 L455 145 M370 178 L455 155 M370 236 L455 165"/>
+    <path d="M610 150 H675"/>
+  </g>
+  <defs><marker id="a" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0 0 L7 3 L0 6 Z" fill="#475569"/></marker></defs>
+  <g stroke="#22d3ee" stroke-width="1" stroke-dasharray="4 3" fill="none">
+    <path d="M205 290 Q120 240 95 182" opacity="0.5"/>
+  </g>
+</svg>

@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 820 280" role="img" aria-labelledby="title desc" font-family="Inter, system-ui, sans-serif">
+  <title id="title">Decorrelated proposers, parallel and blind</title>
+  <desc id="desc">The same prompt is sent to several proposer models from different families at once. Each answers independently and blind, without seeing the others, so dissent is preserved instead of one fluent answer dominating. Selection favours decorrelation (different blind spots) over raw leaderboard score.</desc>
+  <rect width="820" height="280" fill="#0b1020"/>
+  <g stroke="#2a3550" stroke-width="1.5" fill="#131a2b">
+    <rect x="320" y="20" width="180" height="44" rx="10"/>
+    <rect x="40" y="120" width="160" height="80" rx="10" stroke="#22d3ee"/>
+    <rect x="230" y="120" width="160" height="80" rx="10" stroke="#22d3ee"/>
+    <rect x="420" y="120" width="160" height="80" rx="10" stroke="#22d3ee"/>
+    <rect x="610" y="120" width="160" height="80" rx="10" stroke="#22d3ee"/>
+  </g>
+  <g fill="#e5e7eb" font-size="14" text-anchor="middle">
+    <text x="410" y="47">Same prompt</text>
+    <text x="120" y="150" fill="#22d3ee">Family A</text>
+    <text x="310" y="150" fill="#22d3ee">Family B</text>
+    <text x="500" y="150" fill="#22d3ee">Family C</text>
+    <text x="690" y="150" fill="#22d3ee">Family D</text>
+  </g>
+  <g fill="#94a3b8" font-size="11" text-anchor="middle">
+    <text x="120" y="172">parallel</text><text x="120" y="187">blind</text>
+    <text x="310" y="172">parallel</text><text x="310" y="187">blind</text>
+    <text x="500" y="172">parallel</text><text x="500" y="187">blind</text>
+    <text x="690" y="172">parallel</text><text x="690" y="187">blind</text>
+  </g>
+  <g stroke="#475569" stroke-width="1.5" fill="none" marker-end="url(#a)">
+    <path d="M360 64 L120 116"/><path d="M390 64 L310 116"/><path d="M430 64 L500 116"/><path d="M460 64 L690 116"/>
+  </g>
+  <defs><marker id="a" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0 0 L7 3 L0 6 Z" fill="#475569"/></marker></defs>
+  <text x="410" y="248" fill="#94a3b8" font-size="12" text-anchor="middle">Decorrelation over raw score — different families, different blind spots</text>
+  <text x="410" y="268" fill="#64748b" font-size="11" text-anchor="middle">More models is not the strongest lever; grounding is.</text>
+</svg>

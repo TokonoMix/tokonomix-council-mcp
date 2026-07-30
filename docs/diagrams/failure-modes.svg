@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 820 300" role="img" aria-labelledby="title desc" font-family="Inter, system-ui, sans-serif">
+  <title id="title">Failure modes of consensus</title>
+  <desc id="desc">Four named failure modes. Lossy synthesis: the judge drops a real finding a member caught, so the merge under-performs its best member. Shared hallucination: frontier models share training data and fail together on a common blind spot. False consensus: agreement measures correlation, not truth, so unanimous ungrounded answers can be confidently wrong. Precision cost: more models means more flags, some nitpicks, that must be triaged. On routine tasks consensus can be worse than a single model.</desc>
+  <rect width="820" height="300" fill="#0b1020"/>
+  <text x="410" y="34" fill="#f87171" font-size="15" text-anchor="middle">Where consensus can mislead</text>
+  <g stroke="#f87171" stroke-width="1.5" fill="#131a2b">
+    <rect x="40" y="60" width="350" height="90" rx="10"/>
+    <rect x="430" y="60" width="350" height="90" rx="10"/>
+    <rect x="40" y="170" width="350" height="90" rx="10"/>
+    <rect x="430" y="170" width="350" height="90" rx="10"/>
+  </g>
+  <g fill="#e5e7eb" font-size="14">
+    <text x="60" y="88">Lossy synthesis</text>
+    <text x="450" y="88">Shared hallucination</text>
+    <text x="60" y="198">False consensus</text>
+    <text x="450" y="198">Precision cost</text>
+  </g>
+  <g fill="#94a3b8" font-size="11.5">
+    <text x="60" y="110">Judge drops a real finding —</text><text x="60" y="128">merge &lt; its best member.</text>
+    <text x="450" y="110">Shared training data → models</text><text x="450" y="128">miss the same thing, together.</text>
+    <text x="60" y="220">Agreement = correlation,</text><text x="60" y="238">not truth.</text>
+    <text x="450" y="220">More flags, some nitpicks —</text><text x="450" y="238">all must be triaged.</text>
+  </g>
+  <text x="410" y="288" fill="#fbbf24" font-size="12" text-anchor="middle">On routine, saturated tasks a single strong model can be the better choice.</text>
+</svg>
