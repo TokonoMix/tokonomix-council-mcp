@@ -1,0 +1,9 @@
+# Never ship the working draft of the skill (leaked in 1.7.1/1.7.6/1.7.7 — those
+# were deprecated/unpublished). Belt-and-braces: exclude by name and by pattern.
+SKILL.draft.md
+**/*.draft.md
+
+# Compiled test files must not ship in the runtime package.
+*.test.js
+*.test.d.ts
+*.test.js.map

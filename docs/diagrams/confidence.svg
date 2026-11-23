@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 820 280" role="img" aria-labelledby="title desc" font-family="Inter, system-ui, sans-serif">
+  <title id="title">Agreement raises confidence, not correctness</title>
+  <desc id="desc">Agreement between models measures correlation, not truth. The least trustworthy combination is strong agreement on an ungrounded question: high apparent confidence with nothing real underneath. Disagreement is real information that a question is contestable. Strong, grounded agreement is the safest. Confidence is calibration input, never an authorisation to act.</desc>
+  <rect width="820" height="280" fill="#0b1020"/>
+  <text x="410" y="36" fill="#e5e7eb" font-size="15" text-anchor="middle">Confidence ≠ correctness</text>
+  <g stroke="#2a3550" stroke-width="1.5" fill="#131a2b">
+    <rect x="40" y="80" width="230" height="120" rx="10" stroke="#f87171"/>
+    <rect x="295" y="80" width="230" height="120" rx="10" stroke="#fbbf24"/>
+    <rect x="550" y="80" width="230" height="120" rx="10" stroke="#4ade80"/>
+  </g>
+  <g text-anchor="middle">
+    <text x="155" y="112" fill="#f87171" font-size="14">Agree, ungrounded</text>
+    <text x="155" y="150" fill="#94a3b8" font-size="11.5">high apparent confidence,</text>
+    <text x="155" y="167" fill="#94a3b8" font-size="11.5">nothing real underneath —</text>
+    <text x="155" y="184" fill="#f87171" font-size="11.5">least trustworthy</text>
+    <text x="410" y="112" fill="#fbbf24" font-size="14">Disagreement</text>
+    <text x="410" y="150" fill="#94a3b8" font-size="11.5">real signal the question</text>
+    <text x="410" y="167" fill="#94a3b8" font-size="11.5">is contestable —</text>
+    <text x="410" y="184" fill="#fbbf24" font-size="11.5">slow down, inspect</text>
+    <text x="665" y="112" fill="#4ade80" font-size="14">Agree, grounded</text>
+    <text x="665" y="150" fill="#94a3b8" font-size="11.5">agreement checked against</text>
+    <text x="665" y="167" fill="#94a3b8" font-size="11.5">the real artifact —</text>
+    <text x="665" y="184" fill="#4ade80" font-size="11.5">safest, still your call</text>
+  </g>
+  <text x="410" y="245" fill="#94a3b8" font-size="12" text-anchor="middle">Confidence is calibration input — never an authorisation to act.</text>
+</svg>
